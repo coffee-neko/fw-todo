@@ -1,7 +1,9 @@
 package com.example.todoapp;
 
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,7 +39,10 @@ public class HomeController {
     }
 
     @PostMapping("/todos/confirm")
-    public String confirm(@ModelAttribute Todo todo) {
+    public String confirm(@Valid @ModelAttribute Todo todo, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return "create";
+        }
         return "create-confirm";
     }
 
@@ -66,8 +71,12 @@ public class HomeController {
     }
 
     @PostMapping("/todos/{id}/confirm")
-    public String editConfirm(@PathVariable Long id, @ModelAttribute Todo todo, Model model) {
+    public String editConfirm(@PathVariable Long id, @Valid @ModelAttribute Todo todo,
+                              BindingResult bindingResult, Model model) {
         model.addAttribute("id", id);
+        if (bindingResult.hasErrors()) {
+            return "edit";
+        }
         return "edit-confirm";
     }
 
@@ -82,6 +91,24 @@ public class HomeController {
         todo.setId(id);
         todoMapper.update(todo);
         redirectAttributes.addFlashAttribute("message", "保存しました");
+        return "redirect:/todos";
+    }
+
+    @GetMapping("/todos/{id}/delete")
+    public String deleteConfirm(@PathVariable Long id, Model model, RedirectAttributes redirectAttributes) {
+        Todo todo = todoMapper.findById(id);
+        if (todo == null) {
+            redirectAttributes.addFlashAttribute("message", "見つかりませんでした");
+            return "redirect:/todos";
+        }
+        model.addAttribute("todo", todo);
+        return "delete";
+    }
+
+    @PostMapping("/todos/{id}/delete")
+    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        todoMapper.deleteById(id);
+        redirectAttributes.addFlashAttribute("message", "削除しました");
         return "redirect:/todos";
     }
 }

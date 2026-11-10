@@ -30,4 +30,9 @@
             completed = #{completed}
         WHERE id = #{id}
     </update>
+
+    <delete id="deleteById">
+        DELETE FROM todos
+        WHERE id = #{id}
+    </delete>
 </mapper>
