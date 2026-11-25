@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>カレンダー</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <main class="container">
+        <h1 class="page-title" th:text="${displayedMonth.year + '年' + displayedMonth.monthValue + '月'}">2026年4月</h1>
+
+        <nav class="calendar-navigation" aria-label="月の移動">
+            <div class="calendar-navigation-left">
+                <a class="link" th:href="@{/calendar(year=${previousMonth.year}, month=${previousMonth.monthValue})}">前の月</a>
+                <a class="link" th:href="@{/calendar(year=${nextMonth.year}, month=${nextMonth.monthValue})}">次の月</a>
+            </div>
+            <div class="calendar-navigation-right">
+                <a class="link" th:href="@{/todos}">表で見る</a>
+                <a class="link" th:href="@{/todos/new}">新規登録</a>
+            </div>
+        </nav>
+
+        <table class="calendar-table" th:attr="data-from=${firstDate},data-to=${lastDate}">
+            <thead>
+                <tr>
+                    <th>日</th>
+                    <th>月</th>
+                    <th>火</th>
+                    <th>水</th>
+                    <th>木</th>
+                    <th>金</th>
+                    <th>土</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="week : ${calendarWeeks}">
+                    <td th:each="date : ${week}" th:attr="data-date=${date}">
+                        <span th:if="${date != null}" th:text="${date.dayOfMonth}">1</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </main>
+    <script>
+        async function showTodosOnCalendar() {
+            const calendar = document.querySelector('.calendar-table');
+            const from = calendar.dataset.from;
+            const to = calendar.dataset.to;
+            const res = await fetch(`/api/todos?from=${from}&to=${to}`);
+            const todos = await res.json();
+
+            const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+            const todosByDate = new Map();
+
+            todos.forEach((todo) => {
+                if (!todo.dueDate || !document.querySelector(`[data-date="${todo.dueDate}"]`)) {
+                    return;
+                }
+
+                if (!todosByDate.has(todo.dueDate)) {
+                    todosByDate.set(todo.dueDate, []);
+                }
+
+                todosByDate.get(todo.dueDate).push(todo);
+            });
+
+            todosByDate.forEach((todosForDate, date) => {
+                const cell = document.querySelector(`[data-date="${date}"]`);
+
+                todosForDate.slice(0, 3).forEach((todo) => {
+                    const todoName = document.createElement('a');
+                    todoName.className = 'link';
+                    todoName.href = `/todos/${todo.id}/edit`;
+                    todoName.textContent = todo.title;
+
+                    if (todo.dueDate < today && !todo.completed) {
+                        todoName.style.color = '#d00000';
+                    }
+
+                    cell.append(todoName);
+                });
+
+                if (todosForDate.length > 3) {
+                    const moreTodos = document.createElement('div');
+                    moreTodos.textContent = `ほか ${todosForDate.length - 3}件`;
+                    cell.append(moreTodos);
+                }
+            });
+
+            document.querySelectorAll('[data-date]').forEach((cell) => {
+                const date = cell.dataset.date;
+                const dayOfWeek = new Date(`${date}T00:00:00`).getDay();
+
+                if (dayOfWeek === 6) {
+                    cell.style.backgroundColor = '#e8f4ff';
+                } else if (dayOfWeek === 0) {
+                    cell.style.backgroundColor = '#fff0f0';
+                }
+            });
+
+            try {
+                const holidayRes = await fetch(`/api/holidays?from=${from}&to=${to}`);
+
+                if (!holidayRes.ok || holidayRes.headers.has('X-Holidays-Unavailable')) {
+                    throw new Error('祝日を取得できませんでした');
+                }
+
+                const holidays = await holidayRes.json();
+
+                document.querySelectorAll('[data-date]').forEach((cell) => {
+                    const date = cell.dataset.date;
+
+                    if (holidays[date]) {
+                        cell.style.backgroundColor = '#fff8d8';
+                        cell.title = holidays[date];
+                    }
+                });
+            } catch (error) {
+                const notice = document.createElement('p');
+                notice.textContent = '祝日を取れませんでした';
+                document.body.prepend(notice);
+            }
+        }
+
+        showTodosOnCalendar();
+    </script>
+</body>
+</html>

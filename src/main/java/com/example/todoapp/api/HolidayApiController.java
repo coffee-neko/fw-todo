@@ -1,6 +1,7 @@
 package com.example.todoapp.api;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,9 +18,17 @@ public class HolidayApiController {
     }
 
     @GetMapping("/api/holidays")
-    public Map<String, String> holidays(
+    public ResponseEntity<Map<String, String>> holidays(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        return holidayClient.findHolidays(from, to);
+        HolidayClient.HolidayLookupResult result = holidayClient.findHolidaysForApi(from, to);
+
+        if (result.unavailable()) {
+            return ResponseEntity.ok()
+                    .header("X-Holidays-Unavailable", "true")
+                    .body(result.holidays());
+        }
+
+        return ResponseEntity.ok(result.holidays());
     }
 }

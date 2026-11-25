@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.net.URI;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -33,8 +35,10 @@ public class TodoApiController {
     @GetMapping("/api/todos")
     public List<TodoDto> todos(@RequestParam(required = false) String keyword,
                                @RequestParam(required = false) String category,
-                               @RequestParam(required = false) String order) {
-        return todoService.search(keyword, category, order).stream()
+                               @RequestParam(required = false) String order,
+                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return todoService.search(keyword, category, order, from, to).stream()
                 .map(TodoDto::from)
                 .toList();
     }
